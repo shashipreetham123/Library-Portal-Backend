@@ -285,4 +285,32 @@ router.delete("/users/:id", (req, res) => deleteUser(req, res, false))
 router.get("/history", getPaginatedHistoryHandler)
 router.put("/change-password", changePasswordHandler)
 
+router.get("/db-stats", async (req, res) => {
+    try {
+        const db = req.app.locals.db
+        const stats = await db.command({ dbStats: 1, scale: 1 })
+        const storageSize = stats.storageSize || 0
+        const dataSize = stats.dataSize || 0
+        const fsUsedSize = stats.fsUsedSize || 0
+        const fsTotalSize = stats.fsTotalSize || 0
+        const usedPercent = fsTotalSize > 0 ? ((fsUsedSize / fsTotalSize) * 100).toFixed(1) : null
+        const availablePercent = fsTotalSize > 0 ? (((fsTotalSize - fsUsedSize) / fsTotalSize) * 100).toFixed(1) : null
+        return res.status(200).json({
+            message: "Database statistics retrieved successfully",
+            data: {
+                storageSize,
+                dataSize,
+                fsUsedSize,
+                fsTotalSize,
+                usedPercent,
+                availablePercent,
+                collections: stats.collections || 0,
+                objects: stats.objects || 0
+            }
+        })
+    } catch (error) {
+        return res.status(500).json({ message: "Failed to retrieve database statistics", data: null })
+    }
+})
+
 module.exports = router
